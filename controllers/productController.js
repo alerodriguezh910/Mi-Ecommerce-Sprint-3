@@ -87,35 +87,10 @@ const productController = {
         });
     },
 
-    // =========================
-    // BUSCADOR DE PRODUCTOS
-    // =========================
-
     search: (req, res) => {
-
         try {
-
-            const query =
-                req.query.query?.toLowerCase() || '';
-
-            const productsFilePath = path.join(
-                __dirname,
-                '../data/productos.json'
-            );
-
-            const productsData = fs.readFileSync(
-                productsFilePath,
-                'utf-8'
-            );
-
-            const allProducts = JSON.parse(productsData);
-
-            const resultados = allProducts.filter(
-                producto =>
-                    producto.nombre
-                        .toLowerCase()
-                        .includes(query)
-            );
+            const query = req.query.query?.toLowerCase() || '';
+            const resultados = productsService.search(query);
 
             res.render('pages/searchResults', {
                 resultados,
@@ -123,12 +98,7 @@ const productController = {
             });
 
         } catch (error) {
-
-            console.error(
-                "Error en la búsqueda:",
-                error
-            );
-
+            console.error("Error en la búsqueda:", error);
             res.render('pages/searchResults', {
                 resultados: [],
                 query: ''
@@ -136,5 +106,4 @@ const productController = {
         }
     }
 };
-
 module.exports = productController;

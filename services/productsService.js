@@ -1,87 +1,44 @@
-const fs = require('fs');
-const path = require('path');
-
-const productsFilePath = path.join(__dirname, '../data/productos.json');
+const db = require('../db/database');
 
 const productsService = {
-    _getAllProducts: () => {
-        const productsData = fs.readFileSync(productsFilePath, 'utf-8');
-        return JSON.parse(productsData);
+    getMasPedidos: () => {
+        return db.prepare('SELECT * FROM products LIMIT 10').all();
     },
 
     getSugeridos: () => {
-        const allProducts = productsService._getAllProducts();
-        let destacados = allProducts.filter(producto => producto.destacado === true);
-        return destacados.sort(() => 0.5 - Math.random()).slice(0, 5);
-    },
-
-    getMasPedidos: () => {
-        const allProducts = productsService._getAllProducts();
-        let destacados = allProducts.filter(producto => producto.destacado === true);
-        let masPedidos = [...destacados];
-        if (masPedidos.length < 10) {
-            const otros = allProducts.filter(p => p.destacado !== true);
-            masPedidos = [...masPedidos, ...otros];
-        }
-        return masPedidos.sort(() => 0.5 - Math.random()).slice(0, 10);
+        return db.prepare('SELECT * FROM products ORDER BY RANDOM() LIMIT 4').all();
     },
 
     getById: (id) => {
-        const allProducts = productsService._getAllProducts();
-        return allProducts.find(p => p.id === id);
+        return db.prepare('SELECT * FROM products WHERE id = ?').get(id);
     },
 
-    getRelated: (categoria, currentId) => {
-        const allProducts = productsService._getAllProducts();
-        let relacion = allProducts.filter(
-            p => p.categoria &&
-                p.categoria === categoria &&
-                p.id !== currentId
-        );
-        if (relacion.length > 4) {
-            relacion = relacion.sort(() => 0.5 - Math.random());
+    getRelated: (categoria, id) => {
+        return db.prepare('SELECT * FROM products WHERE categoria = ? AND id != ? LIMIT 4').all(categoria, id);
+    },
+
+    getByCategory: (categoria) => {
+        return db.prepare('SELECT * FROM products WHERE categoria = ?').all(categoria);
+    },
+
+    search: (query) => {
+        const searchTerm = `%${query}%`;
+        return db.prepare('SELECT * FROM products WHERE nombre LIKE ?').all(searchTerm);
+    },
+
+    getCartItems: (cartSession) => {
+        if (!cartSession || cartSession.length === 0) return [];
+        
+        const getProductStmt = db.prepare('SELECT * FROM products WHERE id = ?');
+        const items = [];
+        
+        for (let item of cartSession) {
+            const productoReal = getProductStmt.get(item.productId || item.id);
+            if (productoReal) {
+                items.push({ ...productoReal, quantity: item.quantity || 1 });
+            }
         }
-        return relacion.slice(0, 4);
-    },
-
-    getByCategory: (categoryParam) => {
-        const allProducts = productsService._getAllProducts();
-        return allProducts.filter(p =>
-            p.categoria &&
-            p.categoria.toLowerCase() === categoryParam.toLowerCase()
-        );
-    },
-
-    searchProducts: (query) => {
-        const allProducts = productsService._getAllProducts();
-        
-        if (!query) return [];
-        
-        return allProducts.filter(producto =>
-            producto.nombre.toLowerCase().includes(query.toLowerCase())
-        );
-    },
-    getCartItems: (sessionCart) => {
-        
-        if (!sessionCart || sessionCart.length === 0) {
-            return [];
-        }
-
-        const allProducts = productsService._getAllProducts();
-
-        // Combinamos la información de la sesión con los datos reales del JSON
-        return sessionCart.map(item => {
-            const productoCompleto = allProducts.find(p => p.id === item.productId);
-            
-            return {
-                id: productoCompleto.id,
-                nombre: productoCompleto.nombre,
-                precio: productoCompleto.precio,
-                imagen: productoCompleto.imagen,
-                quantity: item.quantity,
-                subtotal: productoCompleto.precio * item.quantity
-            };
-        });
+        return items;
     }
 };
 
