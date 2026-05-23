@@ -4,6 +4,7 @@ const session = require('express-session');
 const app = express();
 const productRoutes = require('./routes/productRoute');
 const cartRoutes = require('./routes/cartRoute');
+require('./database');
 
 
 app.set('view engine', 'ejs');
