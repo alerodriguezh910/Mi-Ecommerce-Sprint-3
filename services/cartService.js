@@ -9,7 +9,7 @@ const cartService = {
         }
     },
 
-  
+
     agregarProducto: (session, productId) => {
         cartService.initCart(session);
         const itemExistente = session.cart.find(item => item.productId === productId);
@@ -47,17 +47,21 @@ const cartService = {
 
     getItems: (session) => {
         cartService.initCart(session);
-        return session.cart.map(item => {
-            const producto = productsService.getById(item.productId);
-            return {
-                productId: item.productId,
-                quantity: item.quantity,
-                nombre: producto.nombre,
-                precio: producto.precio,
-                imagen: producto.imagen,
-                subtotal: producto.precio * item.quantity
-            };
-        });
+        return session.cart
+            .map(item => {
+                const producto = productsService.getById(item.productId);
+                if (!producto) return null; // Prevenir errores si el producto ya no existe en la DB
+                
+                return {
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    nombre: producto.nombre,
+                    precio: producto.precio,
+                    imagen: producto.imagen,
+                    subtotal: producto.precio * item.quantity
+                };
+            })
+            .filter(item => item !== null); // Eliminar del renderizado productos inexistentes
     },
 
     calcularTotal: (items) => {

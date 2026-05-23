@@ -1,11 +1,19 @@
 const productsService = require('../services/productsService');
 
-const normalizeId = (idParam) => {
+const normalizeId = (idParam, res) => {
     const parsedId = parseInt(idParam, 10);
     if (isNaN(parsedId)) {
+        res.status(400).send('Error 400: Solicitud incorrecta. El ID del producto debe ser un número.');
         return null;
     }
-    return parsedId;
+
+    const product = productsService.getById(parsedId);
+    if (!product) {
+        res.status(404).send('Error 404: No se encontro el producto');
+        return null;
+    }
+
+    return product;
 };
 
 const productController = {
@@ -19,19 +27,11 @@ const productController = {
     },
 
     procesarRegister: (req, res) => {
-        res.redirect('pages/index');
+        res.redirect('/');
     },
 
     checkout: (req, res) => {
         res.render('pages/checkout');
-    },
-
-    carrito: (req, res) => {
-        const cartSession = req.session?.cart || [];
-
-        const cartItems = productsService.getCartItems(cartSession);
-
-        res.render('pages/carrito', { cartItems: cartItems });
     },
 
     index: (req, res) => {
@@ -55,20 +55,11 @@ const productController = {
     },
 
     descripcion: (req, res) => {
+        const productoPrincipal = normalizeId(req.params.id, res);
 
-        const productId = normalizeId(req.params.id);
+        if (!productoPrincipal) return;
 
-        if (productId === null) {
-            return res.status(400).send('Error 400: Solicitud incorrecta. El ID del producto debe ser un número.');
-        }
-
-        const productoPrincipal = productsService.getById(productId);
-
-        if (!productoPrincipal) {
-            return res.status(404).send('Error 404: No se encontro el producto');
-        }
-
-        const relacion = productsService.getRelated(productoPrincipal.categoria, productId);
+        const relacion = productsService.getRelated(productoPrincipal.categoria, productoPrincipal.id);
 
         res.render('pages/descripcion', {
             producto: productoPrincipal,

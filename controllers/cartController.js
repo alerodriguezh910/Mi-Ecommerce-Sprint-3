@@ -1,6 +1,21 @@
-const fs = require('fs');
-const path = require('path');
 const cartService = require('../services/cartService');
+const productsService = require('../services/productsService');
+
+const normalizeId = (idParam, res) => {
+    const parsedId = parseInt(idParam, 10);
+    if (isNaN(parsedId)) {
+        res.status(400).send('Error 400: El ID del producto debe ser un número.');
+        return null;
+    }
+
+    const product = productsService.getById(parsedId);
+    if (!product) {
+        res.status(404).send('Error 404: Producto no encontrado.');
+        return null;
+    }
+
+    return product;
+};
 
 const verCarrito = (req, res) => {
     const items = cartService.getItems(req.session);
@@ -9,38 +24,31 @@ const verCarrito = (req, res) => {
 };
 
 const agregarProducto = (req, res) => {
-    const productId = parseInt(req.params.id);
+    const product = normalizeId(req.params.id, res);
+    if (!product) return;
 
-    try {
-        const productsFilePath = path.join(__dirname, '../data/productos.json');
-        const productsData = fs.readFileSync(productsFilePath, 'utf-8');
-        const allProducts = JSON.parse(productsData);
-
-        const productoRequerido = allProducts.find(p => p.id === productId);
-
-        if (productoRequerido && productoRequerido.stock > 0) {
-            cartService.agregarProducto(req.session, productId);
-        } else {
-            console.log("Alerta de seguridad: Intento de agregar producto sin stock desde el front-end.");
-        }
-
-    } catch (error) {
-        console.error("Error al intentar validar el stock del producto:", error);
+    if (product.stock > 0) {
+        cartService.agregarProducto(req.session, product.id);
+    } else {
+        console.log("Alerta de seguridad: Intento de agregar producto sin stock.");
     }
-
 
     res.redirect('/cart');
 };
 
 const aumentarCantidad = (req, res) => {
-    const productId = parseInt(req.params.id);
-    cartService.aumentarCantidad(req.session, productId);
+    const product = normalizeId(req.params.id, res);
+    if (!product) return;
+
+    cartService.aumentarCantidad(req.session, product.id);
     res.redirect('/cart');
 };
 
 const disminuirCantidad = (req, res) => {
-    const productId = parseInt(req.params.id);
-    cartService.disminuirCantidad(req.session, productId);
+    const product = normalizeId(req.params.id, res);
+    if (!product) return;
+
+    cartService.disminuirCantidad(req.session, product.id);
     res.redirect('/cart');
 };
 
